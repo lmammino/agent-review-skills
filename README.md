@@ -43,6 +43,16 @@ In your coding agent (Claude Code, Codex, Cursor, etc.):
 /reconcile-review 42          # Triage and resolve comments on PR #42
 ```
 
+To identify the reviewer agent in multi-model workflows, either set the `AGENT_DISPLAY_NAME`
+environment variable or pass an explicit label as a second argument:
+
+```bash
+AGENT_DISPLAY_NAME=claude-sonnet-4-20250514 /adversarial-review 42
+/adversarial-review 42 gpt-5
+```
+
+When both are provided, the explicit argument takes precedence.
+
 ## How it works
 
 1. Run `/adversarial-review` with a PR number to have an agent post an adversarial review

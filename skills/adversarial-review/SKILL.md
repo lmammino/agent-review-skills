@@ -50,14 +50,37 @@ gh pr view <number> --comments --json comments
 
 ### 2. Determine agent identity
 
-Use your own model name as the comment prefix. If an environment variable `AGENT_DISPLAY_NAME` is
-set, use that instead. The prefix format is:
+The agent prefix must be derived from the environment or from an explicit skill argument, never
+from the model's own guesses about its identity. Models are unreliable at self-identification and
+often default to a generic persona.
+
+Resolve the display name in this order of precedence:
+
+1. **Explicit skill argument**: if the user invoked the skill with an argument (e.g.
+   `/adversarial-review 42 gpt-5`), use that argument as the display name.
+2. **Environment variable**: if `AGENT_DISPLAY_NAME` is set, use it.
+3. **Fallback**: use the literal string `unknown`. Do not guess or invent a model name.
+
+The prefix format is:
 
 ```
-**AGENT <model-name>:** 
+**AGENT <display-name>:** 
 ```
 
-Examples: `**AGENT claude-sonnet-4-20250514:**`, `**AGENT gpt-5:**`
+Examples:
+- `/adversarial-review 42 gpt-5` → `**AGENT gpt-5:** `
+- `AGENT_DISPLAY_NAME=claude-sonnet-4-20250514` → `**AGENT claude-sonnet-4-20250514:** `
+- unset/no argument → `**AGENT unknown:** `
+
+Before posting any comment, verify the prefix by running:
+
+```bash
+# If invoked with an explicit label argument, capture it; otherwise use the env var.
+LABEL="${1:-${AGENT_DISPLAY_NAME:-unknown}}"
+echo "**AGENT ${LABEL}:** "
+```
+
+Use that output verbatim in every comment body.
 
 ### 3. Analyze the changes
 
@@ -106,13 +129,13 @@ gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pulls/<numb
       "path": "src/file.ts",
       "line": 42,
       "side": "RIGHT",
-      "body": "**AGENT claude-sonnet-4-20250514:** This is the comment body.\n\nConsider doing X instead of Y because Z."
+      "body": "**AGENT ${LABEL}:** This is the comment body.\n\nConsider doing X instead of Y because Z."
     },
     {
       "path": "src/other.ts",
       "line": 10,
       "side": "RIGHT",
-      "body": "**AGENT claude-sonnet-4-20250514:** Another concern here."
+      "body": "**AGENT ${LABEL}:** Another concern here."
     }
   ]'
 ```
@@ -131,7 +154,7 @@ reply via:
 
 ```bash
 gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/pulls/<number>/comments" \
-  -f body="**AGENT claude-sonnet-4-20250514:** I disagree because..." \
+  -f body="**AGENT ${LABEL}:** I disagree because..." \
   -f in_reply_to="<comment-database-id>"
 ```
 
