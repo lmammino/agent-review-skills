@@ -18,15 +18,42 @@ phases: **assess** (reads all comments, presents a resolution table with severit
 
 ## Install
 
+Install both skills with:
+
 ```bash
 npx skills add lmammino/agent-review-skills
 ```
 
-Or install specific skills:
+Or install a specific skill:
 
 ```bash
 npx skills add lmammino/agent-review-skills --skill adversarial-review
 npx skills add lmammino/agent-review-skills --skill reconcile-review
+```
+
+To install globally (available across all projects), add the `-g` flag:
+
+```bash
+npx skills add lmammino/agent-review-skills --skill adversarial-review -g
+```
+
+> **Note:** Some agents (e.g. PromptScript) do not support global skill installation. In that case,
+> install the skill at project scope instead.
+
+To update a previously installed skill to the latest version:
+
+```bash
+# Project scope (default)
+npx skills update -p
+
+# Global scope
+npx skills update -g
+```
+
+Or reinstall the specific skill directly:
+
+```bash
+npx skills add lmammino/agent-review-skills --skill adversarial-review -g -y
 ```
 
 ## Prerequisites
