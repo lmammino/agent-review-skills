@@ -7,7 +7,7 @@
 # ~/.pi/agent/skills/adversarial-review/scripts/). See scripts/README.md for install + usage.
 #
 # Usage:
-#   review-train.sh <pr-id> <model-id> [<model-id> ...]
+#   review-train.sh [--shuffle] <pr-id> <model-id> [<model-id> ...]
 #
 # Arguments:
 #   pr-id     GitHub PR number in the current repo.
@@ -16,6 +16,11 @@
 #             which may be one you have no key for. The part after the last "/" becomes the
 #             skill's display-name argument (the review's agent prefix), so
 #             "openai-codex/gpt-5.6-sol" is attributed to "gpt-5.6-sol".
+#
+# Flags:
+#   --shuffle  Randomize the order of the models before running the train. Useful to avoid
+#              systemic ordering bias (e.g. always running the same model first). The flag may
+#              appear anywhere in the argument list.
 #
 # Run from inside the target repo's working tree. The skill needs a git clone plus an
 # authenticated `gh`, and it posts inline review comments to the PR as each model runs.
@@ -57,8 +62,9 @@ render_output() {
 }
 
 usage() {
-  printf 'Usage: %s <pr-id> <model-id> [<model-id> ...]\n' "$0" >&2
+  printf 'Usage: %s [--shuffle] <pr-id> <model-id> [<model-id> ...]\n' "$0" >&2
   printf 'Run from inside the target repo. Each model reviews the PR in sequence.\n' >&2
+  printf 'Pass --shuffle to randomize the order of the models first.\n' >&2
   exit 2
 }
 
@@ -72,19 +78,47 @@ gh auth status >/dev/null 2>&1 \
 
 # --- argument parsing ---------------------------------------------------------
 [ $# -ge 2 ] || usage
+SHUFFLE=0
+args=()
+for arg in "$@"; do
+  case "$arg" in
+    --shuffle) SHUFFLE=1 ;;
+    --shuffle=*) case "${arg#--shuffle=}" in 1|true|yes|on) SHUFFLE=1 ;; *) SHUFFLE=0 ;; esac ;;
+    --help|-h) usage ;;
+    --) shift; while [ $# -gt 0 ]; do args+=("$1"); shift; done; break ;;
+    --*) printf 'unknown flag: %s\n' "$arg" >&2; exit 2 ;;
+    *) args+=("$arg") ;;
+  esac
+done
+set -- "${args[@]}"
+
+[ $# -ge 2 ] || usage
 case "$1" in
   ''|*[!0-9]*) printf 'pr-id must be a positive integer, got: %s\n' "$1" >&2; exit 2 ;;
 esac
 PR_ID="$1"; shift
 MODELS=("$@")
 
+if [ "$SHUFFLE" -eq 1 ] && [ "${#MODELS[@]}" -gt 1 ]; then
+  # Fisher–Yates shuffle so the run order is randomized instead of as given on the CLI.
+  for ((i = ${#MODELS[@]} - 1; i > 0; i--)); do
+    j=$((RANDOM % (i + 1)))
+    tmp="${MODELS[i]}"; MODELS[i]="${MODELS[j]}"; MODELS[j]="$tmp"
+  done
+fi
+
 # Fail fast before launching any model: the PR must exist in the current repo.
 gh pr view "$PR_ID" --json number >/dev/null 2>&1 \
   || { printf 'PR #%s not found in %s\n' "$PR_ID" "$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo 'this repo')" >&2; exit 2; }
 
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo '?')
-printf '🚂 review train: PR #%s on %s — %d model(s): %s\n\n' \
-  "$PR_ID" "$REPO" "${#MODELS[@]}" "${MODELS[*]}"
+if [ "$SHUFFLE" -eq 1 ]; then
+  printf '🚂 review train: PR #%s on %s — %d model(s): %s (shuffled order)\n\n' \
+    "$PR_ID" "$REPO" "${#MODELS[@]}" "${MODELS[*]}"
+else
+  printf '🚂 review train: PR #%s on %s — %d model(s): %s\n\n' \
+    "$PR_ID" "$REPO" "${#MODELS[@]}" "${MODELS[*]}"
+fi
 
 # --- the train ----------------------------------------------------------------
 failed=()

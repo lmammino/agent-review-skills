@@ -49,12 +49,19 @@ curl -fsSL https://raw.githubusercontent.com/lmammino/agent-review-skills/main/s
 
 ```bash
 cd <target-repo>
-review-train.sh <pr-id> <model-id> [<model-id> ...]
+review-train.sh [--shuffle] <pr-id> <model-id> [<model-id> ...]
 ```
 
 Each `<model-id>` is passed to `pi --model` (the runner); its model part (after the last `/`) is
 used as the skill's display-name argument, so every review is attributed to a distinct agent
 prefix.
+
+Pass `--shuffle` to randomize the order of the models before the train runs. If you reuse
+the same command across PRs, the models you list first always run first and their reviews land
+on the PR before the later ones start — which can bias the later models in the queue (they see
+the earlier reviews' inline comments while forming their own). Shuffling spreads that first-mover
+effect across models run to run instead of concentrating it on the same one. The flag may appear
+anywhere in the argument list and is a no-op for a single model.
 
 ### Model ids & providers
 
@@ -82,6 +89,12 @@ review-train.sh 115 glm-5.2:cloud deepseek-v4-pro:cloud qwen3.6:latest
 
 runs three sequential reviews of PR #115, one per model, posting inline comments to the PR.
 
+With `--shuffle` the same three models are run in a randomized order:
+
+```bash
+review-train.sh --shuffle 115 glm-5.2:cloud deepseek-v4-pro:cloud qwen3.6:latest
+```
+
 ## Requirements
 
 - [`pi`](https://github.com/earendil-works/pi-coding-agent) on `PATH`.
@@ -96,6 +109,9 @@ runs three sequential reviews of PR #115, one per model, posting inline comments
 
 - **Sequential:** each `pi -p` invocation is non-interactive and blocks until the review
   completes, so the next model only starts after the previous one finishes.
+- **Shuffleable:** pass `--shuffle` to randomize the run order of the models. This spreads
+  the first-mover bias (earlier reviews are visible to later models in the queue) across models
+  run to run, instead of always concentrating it on the same one. No-op for a single model.
 - **Fault-tolerant:** one model failing does **not** abort the train. Failed models are
   collected and reported in the summary; the script exits `1` if any failed.
 - **Per-run emoji:** each agent run is introduced by a random train emoji.
