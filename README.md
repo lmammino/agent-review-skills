@@ -90,18 +90,25 @@ When both are provided, the explicit argument takes precedence.
 
 ## Automating a multi-model review train
 
-[`review-train.sh`](https://gist.github.com/lmammino/22eb1810bc941bcdd31b2b833130d07f) is a
-small shell script that runs `/adversarial-review` against one PR across several models in
-sequence — each review completing before the next starts — so you can cross-check findings and
-dedupe overlap across models in a single command:
+[`review-train.sh`](skills/adversarial-review/scripts/review-train.sh) (in
+[`skills/adversarial-review/scripts/`](skills/adversarial-review/scripts/)) is a small shell
+script that runs `/adversarial-review` against one PR across several models in sequence — each
+review completing before the next starts — so you can cross-check findings and dedupe overlap
+across models in a single command:
 
 ```bash
-review-train.sh 42 glm-5.2:cloud deepseek-v4-pro:cloud qwen3.6:latest
+review-train.sh 42 openai-codex/gpt-5.6-sol glm-5.2:cloud deepseek-v4-pro:cloud qwen3.6:latest
 ```
 
 It streams each model's output, reports which succeeded, and posts real inline comments to the
 PR as each model runs. After the train, `/reconcile-review` can triage everything that was posted.
-See the gist for install + usage details.
+
+**It ships with the `adversarial-review` skill:** `npx skills add lmammino/agent-review-skills`
+installs the script alongside the skill (to
+`~/.agents/skills/adversarial-review/scripts/review-train.sh`), so once the skill is installed
+the script is already on disk — just symlink it onto your `PATH`. See
+[`skills/adversarial-review/scripts/README.md`](skills/adversarial-review/scripts/README.md) for
+install + usage details.
 
 ## License
 
