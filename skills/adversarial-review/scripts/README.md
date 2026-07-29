@@ -38,12 +38,19 @@ ln -sf ~/.agents/skills/adversarial-review/scripts/review-train.sh ~/.local/bin/
 
 ### Standalone
 
-If you only want the script, grab this single file and make it executable on your `PATH`:
+If you only want the script (without installing the skill), clone the repo and copy the
+script onto your `PATH`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lmammino/agent-review-skills/main/skills/adversarial-review/scripts/review-train.sh \
-  -o ~/.local/bin/review-train.sh && chmod +x ~/.local/bin/review-train.sh
+git clone https://github.com/lmammino/agent-review-skills.git /tmp/agent-review-skills
+cp /tmp/agent-review-skills/skills/adversarial-review/scripts/review-train.sh ~/.local/bin/
+chmod +x ~/.local/bin/review-train.sh
 ```
+
+> **Why not `curl` a raw file?** Downloading and executing a shell script directly from
+> `raw.githubusercontent.com` is flagged by security scanners (Snyk E005) as a high-risk
+> pattern — it's the same vector used in supply-chain attacks. Cloning the repo first lets
+> you inspect the script before running it, and the commit history provides an audit trail.
 
 ## Usage
 
@@ -114,6 +121,11 @@ review-train.sh --shuffle 115 glm-5.2:cloud deepseek-v4-pro:cloud qwen3.6:latest
   run to run, instead of always concentrating it on the same one. No-op for a single model.
 - **Fault-tolerant:** one model failing does **not** abort the train. Failed models are
   collected and reported in the summary; the script exits `1` if any failed.
+- **Pre-flight model validation:** before launching any review, the script runs `pi --list-models`
+  and checks every requested model id against the result. If any model is not found, it prints
+  the invalid id(s), lists the available models, and exits with code 2 — **before** posting any
+  comments to the PR. This prevents the scenario where the first model starts, fails with
+  `Model "…" not found`, and the user must Ctrl-C the rest of the train.
 - **Per-run emoji:** each agent run is introduced by a random train emoji.
 - **Agent output rendering:** when stdout is a terminal, each model's streamed output is passed
   through [`glow`](https://github.com/charmbracelet/glow) if installed (rendered as markdown,
@@ -128,7 +140,7 @@ review-train.sh --shuffle 115 glm-5.2:cloud deepseek-v4-pro:cloud qwen3.6:latest
 |------|---------|
 | `0`  | every review succeeded |
 | `1`  | one or more reviews failed |
-| `2`  | bad usage (missing args, non-numeric pr-id, PR not found) or environment not ready |
+| `2`  | bad usage (missing args, non-numeric pr-id, PR not found, model(s) not found) or environment not ready |
 
 ## Notes
 

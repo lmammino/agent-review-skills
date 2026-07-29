@@ -106,9 +106,41 @@ PR as each model runs. After the train, `/reconcile-review` can triage everythin
 **It ships with the `adversarial-review` skill:** `npx skills add lmammino/agent-review-skills`
 installs the script alongside the skill (to
 `~/.agents/skills/adversarial-review/scripts/review-train.sh`), so once the skill is installed
-the script is already on disk — just symlink it onto your `PATH`. See
-[`skills/adversarial-review/scripts/README.md`](skills/adversarial-review/scripts/README.md) for
-install + usage details.
+the script is already on disk — just symlink it onto your `PATH`:
+
+```bash
+ln -sf ~/.agents/skills/adversarial-review/scripts/review-train.sh ~/.local/bin/review-train.sh
+```
+
+See [`skills/adversarial-review/scripts/README.md`](skills/adversarial-review/scripts/README.md)
+for full install + usage details.
+
+> **Note:** The `skills` CLI does not have a built-in mechanism for installing scripts or
+> executables onto the user's `PATH`. It only copies skill directories (including `SKILL.md`
+> and any bundled files like `scripts/`) into agent-specific locations. Symlinking the script
+> into a directory already on your `PATH` (such as `~/.local/bin/`) is the standard approach.
+
+### Troubleshooting: "Model not found"
+
+If you see an error like this:
+
+```
+Error: Model "kimi-k2.7-code:cloud" not found. Use --list-models to see available models.
+```
+
+the model id you passed doesn't match any model available in your `pi` installation.
+`review-train.sh` now performs a **pre-flight check** — it runs `pi --list-models` and validates
+every requested model *before* launching any review. If any model is invalid, it lists the
+available models and exits immediately (code 2), so no partial reviews are posted to the PR.
+
+Common causes and fixes:
+
+- **Typo or wrong model name**: run `pi --list-models` to see what's available.
+- **Missing provider**: a bare id (e.g. `gpt-5.6-sol`) may resolve to a provider you have no
+  key for. Qualify it with the provider: `openai-codex/gpt-5.6-sol`.
+- **Cloud model not configured**: `*:cloud` models require the corresponding provider to be
+  set up (e.g. `pi /login openai-codex`). See the
+  [Pi documentation](https://github.com/earendil-works/pi-coding-agent) for setup.
 
 ## License
 

@@ -111,6 +111,34 @@ fi
 gh pr view "$PR_ID" --json number >/dev/null 2>&1 \
   || { printf 'PR #%s not found in %s\n' "$PR_ID" "$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo 'this repo')" >&2; exit 2; }
 
+# Pre-flight: validate that every model id is available in pi before starting the train.
+# This avoids the scenario where the first model launches, fails with "Model not found",
+# and the user has to Ctrl-C the rest. We build a lookup set from `pi --list-models` and
+# check each requested model against it.
+printf '🔍 pre-flight: validating %d model(s)…\n' "${#MODELS[@]}" >&2
+AVAILABLE_MODELS=$(pi --list-models 2>/dev/null) || { printf 'failed to list models (pi --list-models)\n' >&2; exit 1; }
+invalid_models=()
+for model in "${MODELS[@]}"; do
+  # pi --list-models prints one model id per line (possibly provider-qualified as provider/model).
+  # We check both the full id and the model-only part (after the last "/") for a match.
+  bare="${model##*/}"
+  if ! printf '%s\n' "$AVAILABLE_MODELS" | grep -qxF "$model" && \
+     ! printf '%s\n' "$AVAILABLE_MODELS" | grep -qxF "$bare"; then
+    invalid_models+=("$model")
+  fi
+done
+if [ ${#invalid_models[@]} -gt 0 ]; then
+  printf '✗ pre-flight: %d model(s) not found:\n' "${#invalid_models[@]}" >&2
+  for m in "${invalid_models[@]}"; do
+    printf '  • %s\n' "$m" >&2
+  done
+  printf '\nAvailable models (pi --list-models):\n%s\n' "$AVAILABLE_MODELS" >&2
+  printf '\nTip: use a provider-qualified id (e.g. openai-codex/gpt-5.6-sol) to pin a\n' >&2
+  printf 'specific provider — a bare id may resolve to one you have no key for.\n' >&2
+  exit 2
+fi
+printf '✓ pre-flight: all models available\n\n' >&2
+
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo '?')
 if [ "$SHUFFLE" -eq 1 ]; then
   printf '🚂 review train: PR #%s on %s — %d model(s): %s (shuffled order)\n\n' \
