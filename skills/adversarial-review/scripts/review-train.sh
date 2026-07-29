@@ -113,18 +113,29 @@ gh pr view "$PR_ID" --json number >/dev/null 2>&1 \
 
 # Pre-flight: validate that every model id is available in pi before starting the train.
 # This avoids the scenario where the first model launches, fails with "Model not found",
-# and the user has to Ctrl-C the rest. We build a lookup set from `pi --list-models` and
-# check each requested model against it.
+# and the user has to Ctrl-C the rest. `pi --list-models` prints a table:
+#   provider      model              context  max-out  thinking  images
+#   openai-codex  gpt-5.6-sol        272K     128K     yes       yes
+# We parse it into a lookup set of "provider model" pairs (whitespace-delimited columns).
 printf '🔍 pre-flight: validating %d model(s)…\n' "${#MODELS[@]}" >&2
 AVAILABLE_MODELS=$(pi --list-models 2>/dev/null) || { printf 'failed to list models (pi --list-models)\n' >&2; exit 1; }
+# Build a set of "provider<TAB>model" lines (skip the header row) for quick lookup.
+AVAILABLE_LOOKUP=$(printf '%s\n' "$AVAILABLE_MODELS" | tail -n +2 | awk '{printf "%s\t%s\n", $1, $2}')
 invalid_models=()
 for model in "${MODELS[@]}"; do
-  # pi --list-models prints one model id per line (possibly provider-qualified as provider/model).
-  # We check both the full id and the model-only part (after the last "/") for a match.
-  bare="${model##*/}"
-  if ! printf '%s\n' "$AVAILABLE_MODELS" | grep -qxF "$model" && \
-     ! printf '%s\n' "$AVAILABLE_MODELS" | grep -qxF "$bare"; then
-    invalid_models+=("$model")
+  # Split a provider-qualified id like "openai-codex/gpt-5.6-sol" into provider + model.
+  # A bare id like "glm-5.2:cloud" has no "/" — we match it against any provider.
+  if [[ "$model" == */* ]]; then
+    provider="${model%%/*}"
+    bare="${model##*/}"
+    if ! printf '%s\n' "$AVAILABLE_LOOKUP" | grep -qxF "${provider}\t${bare}"; then
+      invalid_models+=("$model")
+    fi
+  else
+    bare="$model"
+    if ! printf '%s\n' "$AVAILABLE_LOOKUP" | awk -v m="$bare" '$2 == m {found=1} END{exit !found}'; then
+      invalid_models+=("$model")
+    fi
   fi
 done
 if [ ${#invalid_models[@]} -gt 0 ]; then
