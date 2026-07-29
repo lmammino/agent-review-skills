@@ -128,7 +128,7 @@ for model in "${MODELS[@]}"; do
   if [[ "$model" == */* ]]; then
     provider="${model%%/*}"
     bare="${model##*/}"
-    if ! printf '%s\n' "$AVAILABLE_LOOKUP" | grep -qxF "${provider}\t${bare}"; then
+    if ! printf '%s\n' "$AVAILABLE_LOOKUP" | awk -v p="$provider" -v m="$bare" '$1 == p && $2 == m {found=1} END{exit !found}'; then
       invalid_models+=("$model")
     fi
   else
