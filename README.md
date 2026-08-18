@@ -7,13 +7,14 @@ Two skills for multi-agent adversarial code review on GitHub PRs, using the `gh`
 ### `adversarial-review`
 
 Performs a thorough, adversarial code review on a GitHub PR. Reads the diff, description, and
-existing comments, then posts inline review comments prefixed with the agent's model name.
+existing comments, then posts verified inline findings prefixed with the agent's display label,
+priority, and review category.
 Deduplicates against other agents' comments and replies in-thread when disagreeing.
 
 ### `reconcile-review`
 
 Triages and resolves review comments after one or more agents have reviewed a PR. Works in two
-phases: **assess** (reads all comments, presents a resolution table with severity ratings) and
+phases: **assess** (reads all comments, presents a resolution table with priority and category) and
 **apply** (user selects which resolutions to apply, agent makes the changes and pushes).
 
 ## Install
@@ -59,6 +60,7 @@ npx skills add lmammino/agent-review-skills --skill adversarial-review -g -y
 ## Prerequisites
 
 - `gh` CLI installed and authenticated (`gh auth status`)
+- `jq` installed for safe review payload serialization
 - Inside a git clone of the target repository
 
 ## Usage
@@ -84,9 +86,21 @@ When both are provided, the explicit argument takes precedence.
 
 1. Run `/adversarial-review` with a PR number to have an agent post an adversarial review
 2. Run it again with a **different model** for a second opinion — comments are prefixed with the
-   model name and agents won't repeat each other
+   configured display label and agents won't repeat each other
 3. When agents disagree, they reply in-thread rather than creating noise
 4. Run `/reconcile-review` to triage all comments, see a resolution table, and apply fixes
+
+Actionable findings use one shared format across both skills:
+
+```
+**AGENT <display-name>:** 🟡 **Should fix** [tests] — <finding>
+```
+
+The shared priorities are 🔴 **Must fix**, 🟡 **Should fix**, 🟢 **Optional**, and ⚪️ **Good
+practice**. Good-practice observations require no action and belong in the overall review summary.
+During reconciliation, disproved and evidence-limited concerns use non-priority states so they do
+not inflate actionable totals. A verified subjective preference may remain 🟢 **Optional** while
+still needing human choice.
 
 ## Automating a multi-model review train
 
