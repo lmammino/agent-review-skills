@@ -12,9 +12,57 @@ description, the full diff, and all existing review comments, then posts **inlin
 on the PR. Each comment is prefixed with the agent's model name so multiple agents can review the
 same PR without confusion.
 
-The review is **adversarial**: go beyond surface-level nits. Look for logic errors, edge cases,
-security issues, race conditions, performance problems, missing tests, API contract violations,
-and architectural concerns. Challenge assumptions stated in the PR description.
+The review is **adversarial** but **constructive** — the goal is better code, not finding fault.
+Go beyond surface-level nits and challenge the solution on every level: correctness, security,
+performance, design, and whether the code is more complex than it needs to be.
+
+**Simplicity and pragmatism have high value.** Challenge not just "is this correct?" but also
+"is this necessary?" and "is there a simpler way?" Actively look for over-engineering, unnecessary
+abstraction, premature generalization, dead code, and indirection that adds complexity without
+value. When the code works but is more complex than needed, say so and suggest a simpler
+alternative. A shorter, clearer solution that does the same job is almost always the better one.
+
+## Review dimensions
+
+Evaluate the changes across the following dimensions. Not every dimension will apply to every
+PR — use judgment about what's relevant.
+
+1. **Correctness & edge cases** — Logic errors, off-by-one mistakes, null/empty/zero handling,
+   boundary conditions, race conditions, concurrency issues, resource leaks. Does the code
+   behave correctly under unusual or unexpected inputs?
+
+2. **Error handling** — Are errors caught and handled meaningfully, or silently swallowed? Are
+   error messages useful for debugging? Are error paths tested? Could a failure leave the system
+   in a bad state?
+
+3. **Security** — Input validation and sanitization, injection vulnerabilities, authentication
+   and authorization gaps, data exposure risks, secrets or sensitive data in code or logs.
+
+4. **Performance** — Unnecessary computation, algorithmic complexity, memory usage patterns,
+   N+1 queries, redundant I/O. Look not only for regressions but also for optimization
+   opportunities — can the same result be achieved more efficiently?
+
+5. **Simplification & pragmatism** — Over-engineering, unnecessary abstraction, premature
+   generalization, dead code, unused branches, indirection that adds no value. Can any code be
+   removed entirely? Can a complex pattern be replaced with a straightforward one? *Simple and
+   pragmatic code has high value.*
+
+6. **Readability & maintainability** — Naming, function/class size and responsibility, cognitive
+   complexity, control flow clarity. Optimize for humans reading the code. This is not about style
+   or formatting (leave that to linters) — it's about whether the code is easy to understand and
+   reason about.
+
+7. **Language idioms & best practices** — Is the code idiomatic for the current programming
+   language and its ecosystem? Does it follow established conventions and best practices? Flag
+   non-idiomatic patterns where a native construct or common library function would be clearer
+   or safer.
+
+8. **Documentation** — Are comments needed where the code isn't self-explanatory? If the
+   functionality changed, was relevant documentation (README, API docs, inline docs, changelog)
+   updated to match? Flag stale or missing documentation that the changes should have addressed.
+
+9. **Tests** — Are the tests meaningful or just coverage padding? Do they cover the edge cases
+   identified above? Are there important scenarios that aren't tested?
 
 ## Prerequisites
 
@@ -87,11 +135,11 @@ Use that output verbatim in every comment body.
 Read the diff carefully. For each file changed:
 
 - Understand what the code does and why the change is being made (from the PR description).
-- Look for: logic errors, missing edge cases, security vulnerabilities, race conditions,
-  performance regressions, missing or inadequate tests, API contract breaks, error handling gaps,
-  concurrency issues, resource leaks, and architectural concerns.
+- Evaluate the changes against all relevant [review dimensions](#review-dimensions). Not every
+  dimension applies to every PR — focus on what matters for this code.
 - Check that the PR description's claims match the actual changes.
-- Review test files — are the tests meaningful or just coverage padding?
+- Check whether functionality changes require documentation updates and whether those updates
+  were made.
 - Glance at the PR description for major gaps (missing test plan, unclear motivation, unstated
   breaking changes), but only flag these if they are significant — don't nitpick formatting.
 
@@ -167,10 +215,28 @@ After posting, report:
 
 ## Comment guidelines
 
+- **Write in plain, accessible English.** Use simple words and short sentences. Avoid jargon,
+  metaphor, and unnecessarily formal or literary language — don't use words like "load-bearing,"
+  "seams," "orthogonal," "ergonomic," or "bikeshedding" when plain words work. Explain concepts so
+  that someone unfamiliar with the codebase, the project's intent, or the business domain can
+  follow along. Write for a global audience — many readers are not native English speakers. If you
+  must use a domain-specific term, define it briefly. Prefer "this check prevents empty input"
+  over "this guard is load-bearing for the invariant."
 - **Be specific.** Reference exact line numbers, variable names, and edge cases.
-- **Be constructive.** Suggest a concrete fix or alternative approach.
-- **Explain the "why."** Don't just say "this is wrong" — explain the failure mode.
-- **Prioritize.** Focus on bugs, security issues, and design problems over style nits.
+- **Be constructive.** Suggest a concrete fix or alternative approach — not just the problem. When
+  the fix isn't obvious, include a brief code example showing the suggested change.
+- **Explain the "why."** Don't just say "this is wrong" — explain the failure mode or the benefit
+  of the suggested change.
+- **Mark severity.** Prefix each comment with a severity marker so downstream triage can parse
+  it consistently:
+  - 🔴 **Critical** — must fix (bug, security, data loss)
+  - 🟡 **Suggestion** — improvement worth considering (design, simplification, performance)
+  - 🟢 **Nit** — minor, optional
+  - ✅ **Good practice** — worth reinforcing (use sparingly given the comment budget)
+- **Prioritize.** Focus on bugs, security issues, design problems, and simplification
+  opportunities over style nits. Skip anything a linter would catch.
+- **Champion simplification.** When suggesting a simpler approach, explain what can be removed and
+  why the simpler version is sufficient. Reducing complexity is as valuable as fixing bugs.
 - **Keep comments self-contained.** Each comment should be understandable without reading others.
 - **Never log or include secrets, tokens, or PII** in comment bodies.
 

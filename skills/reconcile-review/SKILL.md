@@ -237,6 +237,15 @@ Report what was done:
 - **Agent disagreements**: always flag these for human judgment rather than picking a side
   automatically.
 
+## Writing style
+
+When writing resolution table descriptions, reply comments, and commit messages:
+
+- **Write in plain, accessible English.** Use simple words and short sentences. Avoid jargon,
+  metaphor, and unnecessarily formal or literary language. Write for a global audience — many
+  readers are not native English speakers. Explain concepts so that someone unfamiliar with the
+  codebase or the business domain can follow along.
+
 ## Constraints
 
 - Do not force-push or rebase without explicit user approval.
