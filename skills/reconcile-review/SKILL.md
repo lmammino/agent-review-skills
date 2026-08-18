@@ -60,10 +60,18 @@ feedback on the PR, not a separate review branch.
 Group comments by thread (top-level review comment + its replies). For each thread:
 
 - **Read the surrounding code** in the full file, not just the diff hunk.
-- **Understand the concern** — what is the commenter asking for?
+- **Do not take any comment at face value.** Before accepting or dismissing a suggestion, verify
+  it against the actual code. Check whether the concern is real — is the input already validated
+  upstream? Is the "missing" null check guaranteed by the type system? Is the "dead" code actually
+  called via reflection, dynamic dispatch, or framework conventions? A comment that sounds right
+  may be wrong in context, and a comment that sounds wrong may be right once you read the full
+  function. Your job is to validate, not to rubber-stamp.
+- **Understand the concern** — what is the commenter asking for, and does the code actually exhibit
+  the problem described?
 - **Determine the severity**: bug, security, design, performance, testing gap, style nit, or
   subjective preference.
-- **Decide a resolution**: accept (make the suggested change), reject (explain why not), or
+- **Decide a resolution based on evidence from the code**, not on the commenter's confidence:
+  accept (make the suggested change), reject (explain why not, with evidence from the code), or
   propose an alternative (a different fix for the same concern).
 
 ### 4. Present the resolution table

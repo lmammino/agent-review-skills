@@ -31,26 +31,47 @@ PR — use judgment about what's relevant.
    boundary conditions, race conditions, concurrency issues, resource leaks. Does the code
    behave correctly under unusual or unexpected inputs?
 
-2. **Error handling** — Are errors caught and handled meaningfully, or silently swallowed? Are
-   error messages useful for debugging? Are error paths tested? Could a failure leave the system
-   in a bad state?
+2. **Error handling** — Are errors caught and handled meaningfully, or silently swallowed? Look
+   for empty catch blocks, catches that only log at debug, promises without rejection handling,
+   and fire-and-forget calls whose failures vanish. Distinguish recoverable from unrecoverable
+   failures — retrying a validation error is pointless; swallowing a server error hides an outage.
+   Check partial failure: if an operation writes in several places and fails midway, what state is
+   left behind? Are error messages useful for debugging without leaking internals to the user?
+   Are error paths tested?
 
-3. **Security** — Input validation and sanitization, injection vulnerabilities, authentication
-   and authorization gaps, data exposure risks, secrets or sensitive data in code or logs.
+3. **Security** — Trace attacker-controlled data from entry to sink; injection, path traversal,
+   and SSRF all live on that path. Check authorization separately from authentication — "logged in"
+   is not "allowed to access this record," and that gap is the most common real bug. Look for
+   input validation and sanitization gaps, data exposure risks, and secrets or sensitive data in
+   code or logs. For each finding, describe the attack, what it gains the attacker, and the fix —
+   drop anything you can't tie to a concrete consequence in this code. Do not invent CVE numbers,
+   advisory IDs, or version-specific claims about dependencies — say what to check instead.
 
 4. **Performance** — Unnecessary computation, algorithmic complexity, memory usage patterns,
    N+1 queries, redundant I/O. Look not only for regressions but also for optimization
-   opportunities — can the same result be achieved more efficiently?
+   opportunities — can the same result be achieved more efficiently? Distinguish measured problems
+   from hypotheses — if you can't verify a performance claim from the code alone, say so and suggest
+   how to confirm it. Judge complexity against actual input sizes: O(n²) on 20 items is fine; the
+   same on 20 million is critical. Don't flag complexity without context. Don't recommend
+   micro-optimizations ahead of algorithmic or I/O problems.
 
 5. **Simplification & pragmatism** — Over-engineering, unnecessary abstraction, premature
    generalization, dead code, unused branches, indirection that adds no value. Can any code be
-   removed entirely? Can a complex pattern be replaced with a straightforward one? *Simple and
-   pragmatic code has high value.*
+   removed entirely? Can a complex pattern be replaced with a straightforward one? The wrong
+   abstraction costs more than duplication — distinguish true duplication (same knowledge, must
+   change together) from coincidental similarity (looks alike, will diverge). If you can't name
+   the shared concept, don't extract it yet. When suggesting a change, start with the simplest
+   thing that solves the problem; only escalate to a pattern or abstraction if the simple approach
+   doesn't hold up. *Simple and pragmatic code has high value.*
 
 6. **Readability & maintainability** — Naming, function/class size and responsibility, cognitive
    complexity, control flow clarity. Optimize for humans reading the code. This is not about style
    or formatting (leave that to linters) — it's about whether the code is easy to understand and
-   reason about.
+   reason about. Flag names that are wrong or misleading before names that are merely short —
+   `userList` holding a Map is worse than `u`. Comments that restate what the code does are
+   usually a naming problem; comments explaining why the code does something are the valuable
+   ones. Judge against how often the code changes — rarely-touched working code has a higher bar
+   for suggested churn.
 
 7. **Language idioms & best practices** — Is the code idiomatic for the current programming
    language and its ecosystem? Does it follow established conventions and best practices? Flag
@@ -58,11 +79,23 @@ PR — use judgment about what's relevant.
    or safer.
 
 8. **Documentation** — Are comments needed where the code isn't self-explanatory? If the
-   functionality changed, was relevant documentation (README, API docs, inline docs, changelog)
-   updated to match? Flag stale or missing documentation that the changes should have addressed.
+   functionality changed, was relevant documentation (README, API docs, inline docs, architecture
+   diagrams, onboarding guides, changelog) updated to match? Check that existing comments still
+   match the code — a stale comment is worse than none. Flag comments that restate the code and add
+   nothing — they rot and then actively mislead. Don't request documentation on self-evident
+   functions. Flag stale or missing documentation that the changes should have addressed.
 
-9. **Tests** — Are the tests meaningful or just coverage padding? Do they cover the edge cases
-   identified above? Are there important scenarios that aren't tested?
+9. **Tests** — Are the tests meaningful or just coverage padding? Check for coverage of: happy
+   path, edge cases, error conditions, boundary values, and invalid inputs. Are integration points
+   (API boundaries, database interactions, external service calls) tested? Are error paths and
+   failure scenarios tested, not just success paths? Are there important scenarios that aren't
+   tested?
+
+10. **Breaking changes & compatibility** — Does this change break existing consumers? Check for
+    API signature changes, removed or renamed public methods, changed return types, modified
+    database schemas, and breaking configuration changes. Anything exported from a package is
+    reachable by consumers you can't see — treat removal as a breaking change unless the scope
+    says otherwise.
 
 ## Prerequisites
 
@@ -222,9 +255,23 @@ After posting, report:
   follow along. Write for a global audience — many readers are not native English speakers. If you
   must use a domain-specific term, define it briefly. Prefer "this check prevents empty input"
   over "this guard is load-bearing for the invariant."
-- **Be specific.** Reference exact line numbers, variable names, and edge cases.
+- **Be specific.** Reference exact line numbers, variable names, and edge cases. Vague comments
+  waste everyone's time. Compare:
+  - Weak: "This code may be vulnerable to injection attacks."
+  - Strong: "Line 34: `req.query.sort` is interpolated into ORDER BY. `?sort=id;DROP` dumps the
+    table. Whitelist column names against a fixed array."
 - **Be constructive.** Suggest a concrete fix or alternative approach — not just the problem. When
-  the fix isn't obvious, include a brief code example showing the suggested change.
+  the fix isn't obvious, include a brief code example showing the suggested change. When suggesting
+  an extraction or refactoring, name the result — if you can't name it clearly, the boundary is in
+  the wrong place.
+- **Verify findings before posting.** Consider whether a concern is a real risk or a false
+  positive before posting. Input may already be validated upstream, a "missing" null check may be
+  guaranteed by the type system, a "dead" function may be called via reflection or dynamic
+  dispatch. If you can't verify something from the diff, say what you can't check rather than
+  asserting it as fact.
+- **Separate fact from inference.** If a concern is a hypothesis (e.g., "this might be slow under
+  load"), label it as such. Don't state unverified assumptions as facts. A confident wrong claim
+  costs more trust than an honest uncertain one.
 - **Explain the "why."** Don't just say "this is wrong" — explain the failure mode or the benefit
   of the suggested change.
 - **Mark severity.** Prefix each comment with a severity marker so downstream triage can parse
@@ -237,6 +284,9 @@ After posting, report:
   opportunities over style nits. Skip anything a linter would catch.
 - **Champion simplification.** When suggesting a simpler approach, explain what can be removed and
   why the simpler version is sufficient. Reducing complexity is as valuable as fixing bugs.
+- **Say when the code is sound.** A review that always finds something is noise. Use the ✅ marker
+  to reinforce genuinely good practices, not as filler. Padding the list wastes the reviewer's
+  trust.
 - **Keep comments self-contained.** Each comment should be understandable without reading others.
 - **Never log or include secrets, tokens, or PII** in comment bodies.
 
