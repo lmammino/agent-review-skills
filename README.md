@@ -98,9 +98,12 @@ Actionable findings use one shared format across both skills:
 
 The shared priorities are 🔴 **Must fix**, 🟡 **Should fix**, 🟢 **Optional**, and ⚪️ **Good
 practice**. Good-practice observations require no action and belong in the overall review summary.
-During reconciliation, disproved and evidence-limited concerns use non-priority states so they do
-not inflate actionable totals. A verified subjective preference may remain 🟢 **Optional** while
-still needing human choice.
+Genuine doubts about intent or requirements that repository evidence cannot settle are posted as
+❓ **Open question** — capped at three per review and kept separate from findings, so they surface
+misalignment for human review without padding the actionable count. During reconciliation,
+disproved and evidence-limited concerns use non-priority states so they do not inflate actionable
+totals. A verified subjective preference may remain 🟢 **Optional** while still needing human
+choice.
 
 ## Automating a multi-model review train
 

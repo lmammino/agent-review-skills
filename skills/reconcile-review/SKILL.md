@@ -75,9 +75,11 @@ tied to one location. For each entry:
   `documentation`, `tests`, or `compatibility`.
 - **Assign the priority** from the shared legend below only when evidence supports the concern. Use
   `N/A (rejected)` when the code disproves it and `Unverified` when available evidence cannot settle
-  it. Do not copy the commenter's label without checking it.
-- **Choose a resolution**: accept, reject with evidence, propose an alternative, or choose no action
-  for a positive observation that requests no change.
+  it. Do not copy the commenter's label without checking it. Keep an ❓ **Open question** marker as
+  is: verify it is a genuine question rather than a disguised finding, then route it to human
+  judgment.
+- **Choose a resolution**: accept, reject with evidence, propose an alternative, choose no action
+  for a positive observation that requests no change, or route an open question to human judgment.
 
 ### 4. Present the resolution table
 
@@ -93,6 +95,7 @@ Output a markdown table in the terminal. Each row represents one review entry:
 | 5 | review | — | — | AGENT gemini | Clear boundary validation | security | ⚪️ Good practice | No action |
 | 6 | inline | src/auth.ts | 31 | AGENT llama | Missing role check | security | N/A (rejected) | Reject: `requireAdmin` already enforces the role |
 | 7 | general | — | — | human-reviewer | May exceed the memory limit | performance | Unverified | Human judgment: production limits are unavailable |
+| 8 | inline | src/pay.ts | 31 | AGENT claude | Is idempotency required when clients retry? | correctness | ❓ Open question | Human judgment: author must confirm retry semantics |
 ```
 
 Shared priority legend:
@@ -103,16 +106,20 @@ Shared priority legend:
   problem with concrete impact.
 - 🟢 **Optional** — a minor improvement that is safe to leave unchanged.
 - ⚪️ **Good practice** — positive feedback that requests no change; use the `No action` resolution.
+- ❓ **Open question** — a reviewer's unresolved doubt about intent or requirements that repository
+  evidence cannot settle. It requests an answer, not a change; surface it for human judgment and
+  do not answer it with code changes.
 
 `N/A (rejected)` and `Unverified` are assessment states, not priorities. Do not include them in the
 priority breakdown. Count them separately so false positives and unknowns do not look actionable.
+Count open questions with them: they are non-actionable and await a human answer.
 Use `Unverified` only when required facts are unavailable. A concern may still be 🟢 **Optional**
 when the facts are known but the choice is a subjective trade-off.
 
 After the table, print a summary:
 - Total review entries found.
 - Breakdown by priority and category.
-- Counts of rejected and unverified concerns.
+- Counts of rejected, unverified, and open-question concerns.
 - Number of unresolved disagreements that need human judgment.
 
 For unresolved disagreements, highlight the trade-off and explain why repository evidence does not
@@ -135,10 +142,12 @@ settle it:
 After presenting the table, ask the user how to proceed. They can say:
 
 - "apply all" — apply only verified rows whose resolution is `Accept` or `Alternative`; exclude
-  `N/A (rejected)`, `Unverified`, and `Good practice` rows
+  `N/A (rejected)`, `Unverified`, `Open question`, and `Good practice` rows
 - "apply 1, 3, 5" — apply only the selected verified actionable rows; warn about and exclude any
-  selected `N/A (rejected)`, `Unverified`, or `Good practice` rows. For `Unverified`, request the
-  missing evidence, reassess the row, and ask for approval again after assigning a real priority
+  selected `N/A (rejected)`, `Unverified`, `Open question`, or `Good practice` rows. For
+  `Unverified`, request the missing evidence, reassess the row, and ask for approval again after
+  assigning a real priority. For `Open question`, keep the thread for the author to answer — do
+  not turn it into a code change without an answer
 - "reject 4" — mark thread 4 as won't-fix (reply with explanation)
 - "change 2 to use let instead" — modify a resolution before applying
 - "skip 6" — leave thread 6 unresolved for now
@@ -154,8 +163,9 @@ the index already contains staged changes, stop and ask the user to commit, unst
 include them; never unstage or commit them without direction. Do not modify or stage unrelated user
 work. For each accepted resolution, edit the file(s) to implement the fix. Follow the repo's
 conventions (code style, commit message format, etc.). Never apply `N/A (rejected)` or `Good
-practice` rows. Never apply an `Unverified` row. Return to Phase 1 after the user supplies new
-evidence, then reclassify the row and request approval again.
+practice` rows. Never apply an `Unverified` row. Never apply an `Open question` row — questions
+are answered by the author or a human, not resolved with code changes. Return to Phase 1 after
+the user supplies new evidence, then reclassify the row and request approval again.
 
 ### 2. Reply to comment threads (optional but recommended)
 
@@ -256,6 +266,7 @@ Report what was done:
 - Number of threads resolved.
 - Number of threads rejected (with reasons).
 - Number of threads left unresolved (needing human judgment).
+- Number of open questions left for the author to answer.
 - Link to the PR.
 
 ---
