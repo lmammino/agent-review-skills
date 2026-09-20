@@ -136,7 +136,12 @@ Before keeping a candidate finding, require all of the following:
 - The issue is not a formatter, linter, or personal-preference concern.
 
 Post **0–15 substantive inline findings**. There is no minimum. If no actionable findings remain,
-say so in the overall review summary; do not invent findings or praise to meet a quota.
+say so in the overall review summary; do not invent findings or praise to meet a quota. Open
+questions are counted separately and capped in [Open questions](#open-questions).
+
+If a candidate concern fails verification because repository evidence cannot settle a genuine
+doubt about intent or requirements, convert it into an [open question](#open-questions) instead
+of dropping it silently — but only if it passes that section's admission tests.
 
 ### 4. Check existing comments (dedup)
 
@@ -173,6 +178,9 @@ priority and category follow it. Use only these priorities:
 - 🟢 **Optional** — a minor improvement that is safe to leave unchanged.
 - ⚪️ **Good practice** — positive feedback. Put this in the overall review summary, not in an inline
   finding, because it requires no resolution.
+- ❓ **Open question** — an unresolved doubt about intent or requirements that repository evidence
+  cannot settle (see [Open questions](#open-questions)). It requests an answer, not a change, and
+  is capped separately from findings.
 
 Use the category identifiers from [Review dimensions](#review-dimensions), such as `[security]` or
 `[tests]`. Keep these labels exact so `reconcile-review` and other tools can interpret them.
@@ -200,6 +208,12 @@ embed the display name, PR-derived paths, or finding text in shell code or comma
       "line": 10,
       "side": "RIGHT",
       "body": "🟡 **Should fix** [tests] — The new failure path is untested. Add a test that makes the dependency reject and asserts the returned error."
+    },
+    {
+      "path": "src/pay.ts",
+      "line": 31,
+      "side": "RIGHT",
+      "body": "❓ **Open question** [correctness] — I understand this endpoint creates a charge for each accepted request; the handler and tests show no deduplication. Must repeated requests for the same payment produce at most one charge? I checked the code, tests, PR description, and payment docs, but found no requirement for repeated requests. If at-most-once charging is required, the implementation needs deduplication; if each request intentionally represents a separate charge, this behavior matches that requirement."
     }
   ]
 }
@@ -261,6 +275,43 @@ After posting, report:
 - Number of new comments posted.
 - Number of issues skipped (already covered by another agent).
 - Any disagreement replies made.
+- Number of open questions posted (kept separate from findings).
+
+## Open questions
+
+A genuine doubt about intent, requirements, or problem/solution fit is worth surfacing — but only
+when the repository cannot settle it. When you cannot tell whether the implementation aligns
+with what the author intends, ask instead of guessing. A human reviewing the questions can spot
+gaps and misalignment.
+
+Post a doubt as an open question only when **all** of the following hold:
+
+- **You tried to resolve it yourself.** You read the surrounding code, tests, PR description, and
+  related docs, and the evidence is missing or contradictory.
+- **The answer is material.** Different plausible answers would lead to materially different
+  findings. If every plausible answer leads to the same conclusion, post that finding or move on.
+- **It asks for information, not a change.** If the code is wrong regardless of intent, post a
+  finding with the appropriate priority. Do not soften a finding into a question.
+
+Distinguish questions from hypotheses: a **hypothesis** is an unverified claim about what the
+code *does* — observable and testable (e.g. "this lookup may be O(n) per row — profile it"), and
+it belongs in a finding. An **open question** is a doubt about what the code *should do* —
+intent, requirements, or fit that only the author or a human reviewer can confirm.
+
+Post **at most 3 open questions per review**. Zero is fine. When more doubts remain, keep the
+ones whose answers most change the review outcome.
+
+Use this format:
+
+```
+❓ **Open question** [<category>] — <question>
+```
+
+State your current understanding of the intended behavior, the doubt, what you checked, and
+what hinges on the answer. One question per comment; do not pack a list. Anchor localized doubts
+inline at the relevant line; put PR-wide doubts about problem/solution fit in the overall review
+body. Open questions follow the same dedup rules as findings: skip a question another reviewer
+already asked, and reply in-thread when you can answer theirs from the repository.
 
 ## Comment guidelines
 
@@ -275,7 +326,8 @@ After posting, report:
 - **Verify before posting.** Read the full context and check upstream validation, type guarantees,
   dynamic or framework-driven calls, and existing tests. State what could not be verified.
 - **Separate fact from inference.** Label hypotheses and explain how to confirm them. Do not present
-  an assumption as a demonstrated failure.
+  an assumption as a demonstrated failure. A doubt about intent or requirements that the repository
+  cannot settle is an [open question](#open-questions), not a hypothesis.
 - **Prioritize changed-code impact.** Focus on correctness, security, data loss, compatibility, and
   material design problems. Do not request unrelated cleanup or speculative optimization.
 - **Keep simplification safe.** Explain what can be removed and why behavior and contracts remain
