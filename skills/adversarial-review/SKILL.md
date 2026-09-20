@@ -213,7 +213,7 @@ embed the display name, PR-derived paths, or finding text in shell code or comma
       "path": "src/pay.ts",
       "line": 31,
       "side": "RIGHT",
-      "body": "❓ **Open question** [correctness] — My understanding is that this endpoint must be idempotent because the client retries on timeout. I could not confirm retry behavior from the code, tests, or the PR description. If retries are possible, duplicate charges can occur; if not, this is fine as is."
+      "body": "❓ **Open question** [correctness] — I understand this endpoint creates a charge for each accepted request; the handler and tests show no deduplication. Must repeated requests for the same payment produce at most one charge? I checked the code, tests, PR description, and payment docs, but found no requirement for repeated requests. If at-most-once charging is required, the implementation needs deduplication; if each request intentionally represents a separate charge, this behavior matches that requirement."
     }
   ]
 }

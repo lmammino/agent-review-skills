@@ -60,11 +60,13 @@ feedback on the PR, not a separate review branch.
 
 ### 3. Categorize and assess each comment thread
 
-Group inline comments by thread (top-level review comment + its replies). Treat each non-empty
-top-level review body or general PR comment with distinct review feedback as a standalone entry.
-Do not create a second entry when a review body only summarizes its inline threads. Record each
-entry's source as `inline`, `review`, or `general`, and use `—` for its file and line when it is not
-tied to one location. For each entry:
+Group inline comments by thread (top-level review comment + its replies). Split each non-empty
+top-level review body or general PR comment into one entry per distinct finding, open question,
+or positive observation. Assess and count each entry separately, even when they share a source
+comment: positive feedback must not hide a question or exclude a finding from application.
+Omit items that only summarize existing inline threads, while retaining any additional feedback
+in the same body. Record each entry's source as `inline`, `review`, or `general`, and use `—` for
+its file and line when it is not tied to one location. For each entry:
 
 - **Read the surrounding code** in the full file, not just the diff hunk.
 - **Verify the concern** against the actual code. Check upstream validation, type guarantees,
