@@ -88,6 +88,52 @@ review-train.sh 116 openai-codex/gpt-5.6-sol glm-5.2:cloud deepseek-v4-pro:cloud
 The first review runs as `gpt-5.6-sol` (via your ChatGPT subscription); the others via local
 Ollama. Discover available ids per provider with `pi --list-models | grep <provider>`.
 
+### Free reviews with OpenRouter
+
+> [!TIP]
+> If you have an [OpenRouter](https://openrouter.ai) account, you can run reviews on their
+> **free** inference. Log in once in `pi` (`/login`, then pick OpenRouter), then pass the
+> `openrouter/free` router:
+>
+> ```bash
+> review-train.sh 116 openrouter/openrouter/free
+> ```
+
+The provider appears **twice** on purpose. `pi --list-models` lists the router as provider
+`openrouter`, model `openrouter/free`, so the full id is `openrouter/` + `openrouter/free`.
+Plain `openrouter/free` is read as provider `openrouter`, model `free`, and fails the pre-flight
+check.
+
+Things to know:
+
+- **The model changes from run to run.** `openrouter/free` picks one of OpenRouter's free models
+  for each request, so two runs may use different models. The review is posted under the agent
+  name `free`.
+- **To pin a specific free model**, use one of the `:free` ids instead. The review is then posted
+  under that model's name (e.g. `gemma-4-31b-it:free`):
+
+  ```bash
+  pi --list-models | grep ':free'
+  review-train.sh 116 openrouter/google/gemma-4-31b-it:free openrouter/nvidia/nemotron-3-super-120b-a12b:free
+  ```
+
+- **Free models can be rate-limited and fail straight away.** Many free models share a pool
+  across all OpenRouter users, so a model can fail with a `429` error even when your own
+  account has quota left, e.g.:
+
+  ```
+  429: ... google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly ...
+  ```
+
+  The train keeps going and lists the failed model in its summary. Re-run just that model later,
+  or add your own provider key in OpenRouter.
+- **Free models may not follow all of the skill's rules.** In testing, smaller free models
+  sometimes signed their review `AGENT unknown` instead of their model name, or posted
+  praise-only comments (e.g. "🟢 Good practice") even though the skill asks for actionable
+  findings only. Treat their reviews as a cheap extra opinion, not a replacement for a strong
+  model. Run [`reconcile-review`](../../reconcile-review/SKILL.md) afterwards to separate the
+  useful findings from the noise.
+
 ### Example
 
 ```bash
