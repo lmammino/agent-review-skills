@@ -127,7 +127,9 @@ for model in "${MODELS[@]}"; do
   # A bare id like "glm-5.2:cloud" has no "/" — we match it against any provider.
   if [[ "$model" == */* ]]; then
     provider="${model%%/*}"
-    bare="${model##*/}"
+    # Strip only the provider: OpenRouter ids such as "openrouter/qwen/qwen3.8-max-0902"
+    # are listed by pi as provider "openrouter", model "qwen/qwen3.8-max-0902".
+    bare="${model#*/}"
     if ! printf '%s\n' "$AVAILABLE_LOOKUP" | awk -v p="$provider" -v m="$bare" '$1 == p && $2 == m {found=1} END{exit !found}'; then
       invalid_models+=("$model")
     fi
