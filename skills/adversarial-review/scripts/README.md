@@ -88,6 +88,38 @@ review-train.sh 116 openai-codex/gpt-5.6-sol glm-5.2:cloud deepseek-v4-pro:cloud
 The first review runs as `gpt-5.6-sol` (via your ChatGPT subscription); the others via local
 Ollama. Discover available ids per provider with `pi --list-models | grep <provider>`.
 
+### Free reviews with OpenRouter
+
+> [!TIP]
+> If you have an [OpenRouter](https://openrouter.ai) account, you can run reviews on their
+> **free** inference. Log in once in `pi` (`/login`, then pick OpenRouter), then pass the
+> `openrouter/free` router:
+>
+> ```bash
+> review-train.sh 116 openrouter/openrouter/free
+> ```
+
+The provider appears **twice** on purpose. `pi --list-models` lists the router as provider
+`openrouter`, model `openrouter/free`, so the full id is `openrouter/` + `openrouter/free`.
+Plain `openrouter/free` is read as provider `openrouter`, model `free`, and fails the pre-flight
+check.
+
+Things to know:
+
+- **The model changes from run to run.** `openrouter/free` picks one of OpenRouter's free models
+  for each request, so two runs may use different models. The review is posted under the agent
+  name `free`.
+- **To pin a specific free model**, use one of the `:free` ids instead. The review is then posted
+  under that model's name (e.g. `gemma-4-31b-it:free`):
+
+  ```bash
+  pi --list-models | grep ':free'
+  review-train.sh 116 openrouter/google/gemma-4-31b-it:free openrouter/nvidia/nemotron-3-super-120b-a12b:free
+  ```
+
+- **Free models have rate limits** and may be slower or less capable than paid ones. If a run
+  fails, check your OpenRouter limits before retrying.
+
 ### Example
 
 ```bash

@@ -120,6 +120,19 @@ review-train.sh 42 openai-codex/gpt-5.6-sol glm-5.2:cloud deepseek-v4-pro:cloud 
 It streams each model's output, reports which succeeded, and posts real inline comments to the
 PR as each model runs. After the train, `/reconcile-review` can triage everything that was posted.
 
+> [!TIP]
+> **Free reviews with OpenRouter.** If you have an [OpenRouter](https://openrouter.ai) account,
+> you can run the train on their free inference. Log in once in `pi` (`/login`, then pick
+> OpenRouter) and use the `openrouter/free` router. Write the provider **twice**, since the
+> model id itself starts with `openrouter/`:
+>
+> ```bash
+> review-train.sh 42 openrouter/openrouter/free
+> ```
+>
+> See [the script's README](skills/adversarial-review/scripts/README.md#free-reviews-with-openrouter)
+> for caveats and how to pin a specific free model.
+
 **It ships with the `adversarial-review` skill:** `npx skills add lmammino/agent-review-skills`
 installs the script alongside the skill (to
 `~/.agents/skills/adversarial-review/scripts/review-train.sh`), so once the skill is installed
