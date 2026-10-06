@@ -130,8 +130,10 @@ PR as each model runs. After the train, `/reconcile-review` can triage everythin
 > review-train.sh 42 openrouter/openrouter/free
 > ```
 >
-> See [the script's README](skills/adversarial-review/scripts/README.md#free-reviews-with-openrouter)
-> for caveats and how to pin a specific free model.
+> Free models are often rate-limited (a run can fail with a `429` error) and may follow the
+> skill's rules less closely than paid models. See
+> [the script's README](skills/adversarial-review/scripts/README.md#free-reviews-with-openrouter)
+> for details and how to pin a specific free model.
 
 **It ships with the `adversarial-review` skill:** `npx skills add lmammino/agent-review-skills`
 installs the script alongside the skill (to

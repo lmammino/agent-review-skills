@@ -117,8 +117,22 @@ Things to know:
   review-train.sh 116 openrouter/google/gemma-4-31b-it:free openrouter/nvidia/nemotron-3-super-120b-a12b:free
   ```
 
-- **Free models have rate limits** and may be slower or less capable than paid ones. If a run
-  fails, check your OpenRouter limits before retrying.
+- **Free models can be rate-limited and fail straight away.** Many free models share a pool
+  across all OpenRouter users, so a model can fail with a `429` error even when your own
+  account has quota left, e.g.:
+
+  ```
+  429: ... google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly ...
+  ```
+
+  The train keeps going and lists the failed model in its summary. Re-run just that model later,
+  or add your own provider key in OpenRouter.
+- **Free models may not follow all of the skill's rules.** In testing, smaller free models
+  sometimes signed their review `AGENT unknown` instead of their model name, or posted
+  praise-only comments (e.g. "🟢 Good practice") even though the skill asks for actionable
+  findings only. Treat their reviews as a cheap extra opinion, not a replacement for a strong
+  model. Run [`reconcile-review`](../../reconcile-review/SKILL.md) afterwards to separate the
+  useful findings from the noise.
 
 ### Example
 
