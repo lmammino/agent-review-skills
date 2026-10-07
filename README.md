@@ -105,7 +105,11 @@ disproved and evidence-limited concerns use non-priority states so they do not i
 totals. A verified subjective preference may remain 🟢 **Optional** while still needing human
 choice.
 
-## Automating a multi-model review train
+## 🚂 Automating a multi-model review train
+
+<p align="center">
+  <img src="https://media1.tenor.com/m/seghh0Qr0NIAAAAC/funny-iliketrains.gif" alt="A kid saying &quot;I like trains&quot;, right before getting hit by one" width="320">
+</p>
 
 [`review-train.sh`](skills/adversarial-review/scripts/review-train.sh) (in
 [`skills/adversarial-review/scripts/`](skills/adversarial-review/scripts/)) is a small shell
