@@ -7,7 +7,7 @@
 # ~/.pi/agent/skills/adversarial-review/scripts/). See scripts/README.md for install + usage.
 #
 # Usage:
-#   review-train.sh [--shuffle] <pr-id> <model-id> [<model-id> ...]
+#   review-train.sh [--shuffle] [--max <n>] <pr-id> <model-id> [<model-id> ...]
 #
 # Arguments:
 #   pr-id     GitHub PR number in the current repo.
@@ -21,6 +21,9 @@
 #   --shuffle  Randomize the order of the models before running the train. Useful to avoid
 #              systemic ordering bias (e.g. always running the same model first). The flag may
 #              appear anywhere in the argument list.
+#   --max <n>  Run at most n models. Applied after --shuffle, so combined with it you get a random
+#              subset of the pool; without it, the first n models as given. Pre-flight still
+#              validates the whole pool so a typo fails every run, not only when it is picked.
 #
 # Run from inside the target repo's working tree. The skill needs a git clone plus an
 # authenticated `gh`, and it posts inline review comments to the PR as each model runs.
@@ -62,9 +65,10 @@ render_output() {
 }
 
 usage() {
-  printf 'Usage: %s [--shuffle] <pr-id> <model-id> [<model-id> ...]\n' "$0" >&2
+  printf 'Usage: %s [--shuffle] [--max <n>] <pr-id> <model-id> [<model-id> ...]\n' "$0" >&2
   printf 'Run from inside the target repo. Each model reviews the PR in sequence.\n' >&2
   printf 'Pass --shuffle to randomize the order of the models first.\n' >&2
+  printf 'Pass --max <n> to run at most n of the given models.\n' >&2
   exit 2
 }
 
@@ -79,18 +83,28 @@ gh auth status >/dev/null 2>&1 \
 # --- argument parsing ---------------------------------------------------------
 [ $# -ge 2 ] || usage
 SHUFFLE=0
+MAX=''
 args=()
-for arg in "$@"; do
+while [ $# -gt 0 ]; do
+  arg="$1"; shift
   case "$arg" in
     --shuffle) SHUFFLE=1 ;;
     --shuffle=*) case "${arg#--shuffle=}" in 1|true|yes|on) SHUFFLE=1 ;; *) SHUFFLE=0 ;; esac ;;
+    --max) [ $# -gt 0 ] || { printf -- '--max requires a value\n' >&2; exit 2; }; MAX="$1"; shift ;;
+    --max=*) MAX="${arg#--max=}" ;;
     --help|-h) usage ;;
-    --) shift; while [ $# -gt 0 ]; do args+=("$1"); shift; done; break ;;
+    --) args+=("$@"); break ;;
     --*) printf 'unknown flag: %s\n' "$arg" >&2; exit 2 ;;
     *) args+=("$arg") ;;
   esac
 done
 set -- "${args[@]}"
+
+if [ -n "$MAX" ]; then
+  case "$MAX" in
+    *[!0-9]*|0*) printf -- '--max must be a positive integer, got: %s\n' "$MAX" >&2; exit 2 ;;
+  esac
+fi
 
 [ $# -ge 2 ] || usage
 case "$1" in
@@ -105,6 +119,13 @@ if [ "$SHUFFLE" -eq 1 ] && [ "${#MODELS[@]}" -gt 1 ]; then
     j=$((RANDOM % (i + 1)))
     tmp="${MODELS[i]}"; MODELS[i]="${MODELS[j]}"; MODELS[j]="$tmp"
   done
+fi
+
+# Pre-flight checks the whole pool, so keep it and run only the first MAX models.
+POOL_SIZE=${#MODELS[@]}
+SELECTED=("${MODELS[@]}")
+if [ -n "$MAX" ] && [ "$MAX" -lt "$POOL_SIZE" ]; then
+  SELECTED=("${MODELS[@]:0:MAX}")
 fi
 
 # Fail fast before launching any model: the PR must exist in the current repo.
@@ -152,14 +173,14 @@ if [ ${#invalid_models[@]} -gt 0 ]; then
 fi
 printf '✓ pre-flight: all models available\n\n' >&2
 
+MODELS=("${SELECTED[@]}")
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo '?')
-if [ "$SHUFFLE" -eq 1 ]; then
-  printf '🚂 review train: PR #%s on %s — %d model(s): %s (shuffled order)\n\n' \
-    "$PR_ID" "$REPO" "${#MODELS[@]}" "${MODELS[*]}"
-else
-  printf '🚂 review train: PR #%s on %s — %d model(s): %s\n\n' \
-    "$PR_ID" "$REPO" "${#MODELS[@]}" "${MODELS[*]}"
-fi
+count="${#MODELS[@]}"
+[ "$count" -lt "$POOL_SIZE" ] && count="$count of $POOL_SIZE"
+order=''
+[ "$SHUFFLE" -eq 1 ] && order=' (shuffled order)'
+printf '🚂 review train: PR #%s on %s — %s model(s): %s%s\n\n' \
+  "$PR_ID" "$REPO" "$count" "${MODELS[*]}" "$order"
 
 # --- the train ----------------------------------------------------------------
 failed=()
