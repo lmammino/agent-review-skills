@@ -105,6 +105,12 @@ disproved and evidence-limited concerns use non-priority states so they do not i
 totals. A verified subjective preference may remain 🟢 **Optional** while still needing human
 choice.
 
+Both skills share a writing style for comments, replies, and commit messages. It asks the agent to
+lead with the problem, skip what the author already knows, and avoid common AI writing patterns
+such as "not X but Y" contrasts, closing restatements, em dashes, and chat wrappers. The rules are
+adapted from [humanizer](https://github.com/blader/humanizer) and Wikipedia's
+[Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
+
 ## 🚂 Automating a multi-model review train
 
 <p align="center">
