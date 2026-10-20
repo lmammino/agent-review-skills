@@ -84,26 +84,30 @@ gh auth status >/dev/null 2>&1 \
 [ $# -ge 2 ] || usage
 SHUFFLE=0
 MAX=''
+MAX_SET=0
 args=()
 while [ $# -gt 0 ]; do
   arg="$1"; shift
   case "$arg" in
     --shuffle) SHUFFLE=1 ;;
     --shuffle=*) case "${arg#--shuffle=}" in 1|true|yes|on) SHUFFLE=1 ;; *) SHUFFLE=0 ;; esac ;;
-    --max) [ $# -gt 0 ] || { printf -- '--max requires a value\n' >&2; exit 2; }; MAX="$1"; shift ;;
-    --max=*) MAX="${arg#--max=}" ;;
+    --max) [ $# -gt 0 ] || { printf -- '--max requires a value\n' >&2; exit 2; }; MAX="$1"; MAX_SET=1; shift ;;
+    --max=*) MAX="${arg#--max=}"; MAX_SET=1 ;;
     --help|-h) usage ;;
     --) args+=("$@"); break ;;
     --*) printf 'unknown flag: %s\n' "$arg" >&2; exit 2 ;;
     *) args+=("$arg") ;;
   esac
 done
-set -- "${args[@]}"
+# The `+` form avoids an unbound-variable error on an empty array in bash 3.2 under `set -u`.
+set -- ${args[@]+"${args[@]}"}
 
-if [ -n "$MAX" ]; then
+if [ "$MAX_SET" -eq 1 ]; then
   case "$MAX" in
-    *[!0-9]*|0*) printf -- '--max must be a positive integer, got: %s\n' "$MAX" >&2; exit 2 ;;
+    ''|*[!0-9]*|0*) printf -- '--max must be a positive integer, got: %s\n' "$MAX" >&2; exit 2 ;;
   esac
+  # Bound the length so `[ -lt ]` never sees a value beyond bash's 64-bit integers.
+  [ ${#MAX} -le 9 ] || { printf -- '--max is too large, got: %s\n' "$MAX" >&2; exit 2; }
 fi
 
 [ $# -ge 2 ] || usage
@@ -124,7 +128,7 @@ fi
 # Pre-flight checks the whole pool, so keep it and run only the first MAX models.
 POOL_SIZE=${#MODELS[@]}
 SELECTED=("${MODELS[@]}")
-if [ -n "$MAX" ] && [ "$MAX" -lt "$POOL_SIZE" ]; then
+if [ "$MAX_SET" -eq 1 ] && [ "$MAX" -lt "$POOL_SIZE" ]; then
   SELECTED=("${MODELS[@]:0:MAX}")
 fi
 
