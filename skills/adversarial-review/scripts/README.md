@@ -93,6 +93,11 @@ review-train.sh 116 openai-codex/gpt-5.6-sol glm-5.2:cloud deepseek-v4-pro:cloud
 The first review runs as `gpt-5.6-sol` (via your ChatGPT subscription); the others via local
 Ollama. Discover available ids per provider with `pi --list-models | grep <provider>`.
 
+Pi only sees the Ollama models listed in `~/.pi/agent/models.json`. `ollama launch pi --model <id>`
+rewrites that file and can drop models that an earlier launch added. If pre-flight reports an
+Ollama model as missing, add its entry back to `models.json` (copy an existing `:cloud` entry and
+change the `id`), then check `pi --list-models` again.
+
 ### Free reviews with OpenRouter
 
 > [!TIP]
